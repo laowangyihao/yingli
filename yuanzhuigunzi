@@ -1,0 +1,402 @@
+c Program on Taper Roller Contact
+c
+c **********************************************************************
+c        Contact analysis between taper roller and raceway with
+c        curve surface
+c
+c                      Virsion 7．0。April 9，2003，by J．W．Luo
+c
+c **********************************************************************
+c
+c        Explanation about variation symbols  
+c        d1——Small end diameter of roller
+c        d2——Large end diameter of roller
+c        r1——Roller efficient length
+c        alfa——Half taper angle of roller
+c        dr1——Small end diameter of raceway
+c        m——Raceway is plane(0)。inner(1)or outer(3)
+c        dc——Roller contact deflection
+c        q——Roller load
+c        tilt——Roller tilt
+c        ql——Calculated equilibrium 10ad
+c        qm——Calculated equilibrium moment
+c        p——Array of roller center stress field
+c        a——Array of contact half width
+c        n——Element number along roller length
+c        h—— Element half width
+c 
+c **********************************************************************
+character aopt*1
+dimension P(30)，a(30)
+c ******
+Set consrants
+v=O．3
+e=2．06e5
+pai=3．14159265
+tO=4．*(1．-v**2)／(pai*e)
+c ******
+c        Input data and check j
+lO       call inrol(d1，d2．r1，alfa，q，tiIt，n，m，dr1，fai)
+write(*,15)
+15       format(／’Check the input data?(y／n)’，$)
+read(*，’(a1)’)aopt
+if(aopt．eq．’Y’．or．aopt．eq．’Y’)goto 10
+h=O.5*r1／float(n)
+c ******
+c        Calculate contect stress and width fi eld
+call contac(d1,d2,r1,alfa,h,q,titt,ql,qm,n,tO
++  a,P,dc,m,dr1,fai)
+c ******
+c        Output calculated results
+call result(d1,d2,r1,alfa,q,tilt,ql,qm,dc,
++  a,p,n,m,dr1,fai)
+write(*，20)
+20       format(／’Do you want another run?(y／n)’,$)
+read(*，’(a1)’)aopt
+if(aopt.Eq.’y’.or.aopt.eq.’y’)goto 1O
+stop
+end
+subroutine inrol(d1．d2，r1，alfa，q，tiit，n，m，dr1，fai)
+c **********************************************************************
+c
+c        Input roller geomertry and load
+c
+c **********************************************************************
+write(*，5)
+5        format(//’Input roller data’／)
+write(*，10)
+10       format(／’Small end diameter of roller(mm) =’,$)
+read(*．*)d1
+write(*。12)
+12       format(／’Large end diameter of roller(mm) =’,$)
+read(*．*)d2
+write(*，15)
+15       format(／’Roller efficient length     (mm) =’,$)
+read(*。*)r1
+write(*，20)
+20       format(／’Half taper angle of roller(deg.) =’,$)
+Read(*,*)alfa
+alfa=O．017453*alfa
+write(*，25)
+25       format(／’Roller ioad                 (N) =’,$)
+read(*，*)q
+write(*，30)
+30       format(／’Roller tilt 	             (deg.) =’，$)
+read(*，*)tilt
+tilt=O．017453*tiit
+write(*，35)
+35       format(／’Strip number of reller(odd，<30)=’，$)
+read(*，*)n
+write(*，40)
+40       format(／／’Plane or inner／outer raceway contact’,
++  ’(0 or 1／2)=’，$)
+read(*，*)m
+if(1-m) 45,50,55
+45       write(*，46)
+46       format(//’Input outer raceway data’/)
+goto 52
+50       write(*，51)
+51       format(//’Input inner raceway data’／)
+52       write(*．53)
+53       format(／’Small diameter of raceway  (mm)= ’，$)
+read(*，*) dr1
+write(*,54)
+54       format(／’Half taper angle of raceway(deg)=’，$)
+read(*．*)fai
+fai=O．017453．fai
+55       return
+end
+subroutine contac(d1，d2，r1，alfa，h，q，tilt，ql，qm，n，tO，
++  a，P，dc，mr，dr1，fai)
+c **********************************************************************
+c   Determination of contact stresses and area
+c   d()——Flexibility matrix
+c   s()——Gap array between roller and raceway
+c   r()——Curve radius at contact point
+c   aa()——Temporal array
+c   rli—— Distance from small end to element i
+c   di——Diameter at the distance rli
+c **********************************************************************
+dimension p(30)，a(30)，aa(30)，d(30，30)，s(30)，r(30)
+c ******
+c        Give，initial value of dc and calculate equivelant
+c        curvature tadii．the radii of roller and raceway
+c        is placed in a(i)and aa(i)temporally
+dc=3．84e-5*q**O.9／r1**O.8
+call curvat(n，h，r1，d1，d2，alfa，a)
+if(mr．eq．0) goto 110
+dr2=dr1+2.*r1*sin(fai)
+call curvat(n，h，r1，dr1．dr2，fai，aa)
+if(1-mr)100，105，110
+100      do 102 i=1，n
+102      r(i)=a(i)*aa(i)／(aa(i)-a(i))
+goto 115
+105      do 106 i=1，n
+106      r(i)=a(i)*aa(i)／(aa(i)+a(i))
+goto 115
+110      do 112 i=1，n
+112      r(i)=a(i)
+c
+c ******
+c        Load(or dc)iteration
+115      n1=O
+3        n1=n1+1
+do 5 i=1，n
+rli=h* (1．+2．*float(i-1))
+s(i)=dc-rli*tilt
+5        a(i)=sqrt(2．* r(i)*dc)
+write(*，9)n1，ql
+9        format(//’Iteration number=’,i4
++’      Load=’e1O．2)
+c ******
+c        Contact stress and half width iteration
+m=n
+num=O
+20       num=num+1
+do 22 i=1，n
+22       aa(i)=a(i)
+c ******
+c
+c        Calculate influence coeff．and solve for p()
+c
+call infmat(n，h，a，d)
+call gauss(t0，n，ierror,d，p，s)
+if(ierror．ne．0)stop’**Solving equation faiis**’
+c ******
+c        Calculate the new a 0 according to p()
+do 24 i=1,n
+24       a(i)=1．767e-5*r(i)*p(i)
+c ******
+c        Find number of non_contact strips n1
+n1=O
+do 25 i=1．n
+if(a(i)．ge．0．01)goto 25
+p(i)=0．
+a(i)=0．
+s(i)=O．
+n1=n1+1
+25       contihue
+c ******
+
+c        Determine if contact area and stress are
+c        converged．If not，return to lable 20
+nO=n-n1
+if(n0．eq．m)then
+do 30 i=1．n
+error=abs(a(i)-an(i))
+if(error．gt．0.002)then
+do 29 j=1．n
+a(j)=0．5*(aa(j)+a(j))
+29           continue
+goto 20
+endif
+30         continue
+else
+m=nO
+goto 20
+endif
+c ******
+
+c        Calculate equi 1 ibrium load and moment
+c
+cl=float(n)*h
+ql=0．
+qm=O．
+do 40 i=1．n
+r1 i=h*(1．+2．*float(i-1))
+ql=ql+p(i)*a(i)
+40       qm=qm+p(i)*a(i)*(cl—r1i)
+ql=3．14159265*ql*h
+qm=3．14159265*qm*h
+c        Adjust deflection of roller
+error=(q-ql)／q
+if(abs(error)．gt．0.005)then
+dc=(1.+error)*dc
+goto 3
+endif
+return
+end
+subroutine curvat(n，h，r1，d1，d2，alfa，r)
+c **********************************************************************
+c
+c Calculate curvature radii r(i)at the contact point i
+c
+c **********************************************************************
+dimension r(30)
+do 5 i=1,n
+rli=h*(1．+2．*float(i-1))
+di=(1.-rli／r1)*d1+(rli／r1)*d2
+c=sin(alfa)**2+2.*sin(alfa)**4／cos(2．*alfa)
+bi=O。5{(1-+c)*di
+ai=O．5*di*(COS(alfa)+sin(alfa)*tan(2．*alfa))
+5        r(i)=bi**2/ai
+return
+end
+subroutine infmat(n，h，a,d)
+
+c **********************************************************************
+c Calculate the influence coefficient matrix
+c **********************************************************************
+
+dimension a(30)，d(30，30)
+do 10 i=1，n
+if(a(i)．1e．0.01)goto 20
+yi=2.*h*float(i-1)
+do 15 j=1.n
+if(a(j)．1e．0.01)goto 15
+yj=2.*h,float(j-1)
+dy=abs(yj-yi) ’
+call calf(dy，h，a(j)，d(i，j))
+15       continue
+goto 10
+20       do 25 j=1.n
+d(j．i)=O．
+d(i，j)=O．
+25       d(i．j)=1．
+10       continue
+return
+end
+
+
+subroutine calf(dy，h，a，cf)
+c **********************************************************************
+c
+c
+c        Integration of influence coefficients over strip using
+c        Gauss formula with n=40．The interval integral is 0 to
+c        a considered symmetry of function f at interval—a to a
+c
+c **********************************************************************
+n=40
+s=1.／float(n)
+alfa=s*O.4225497308
+beta=s*1.577350269
+cf=f(dy，h，a，alfa)+f(dy．h，a，beta)
+m=n／2-1
+do 5 i=1，m
+alfa=alfa+2.*s
+beta=beta+2.*s
+5        cf=cf+f(dy，h，a，alfa)+f(dy，h，a，beta)
+cf=a*s*cf
+return
+end
+function f(dr,h,a,u)
+c **********************************************************************
+c
+c Calculation of influence coefficient function F
+c
+c **********************************************************************
+c=sqrt(1．-u**2)
+dy1=dy+h
+dy2=dy-h
+f1=dy1+sqrt(dy1**2+(a*u)**2)
+f2=dy2+sqrt(dy2**2+(a*u)**2)
+f=c*alog(f1／f2)
+return
+end
+
+
+subroutine gauss(tO，n，ierror，d，p，s)
+c **********************************************************************
+c
+c        Solve equition[d]{p}={s}with Gauss elimilation method，
+c        {p}save{s}at the beginning and save the solution at
+c        the end．ierror=O if solution is finished else ierror=1．
+c
+c **********************************************************************
+
+double precision dd(30，30)，dp(30)，c，t
+dimension d(30，30)，P(30)，S(30)
+do 5 i=1，n
+dp(i)=s(i)
+do 5 j=1,n
+dd(i，j)=d(i，j)
+5        continue
+nml=n-1
+do 10 k=1,nml
+c=O．
+do 2 i=k,n
+if(dabs(dd(i，k)).1e.dabs(c))goto 2
+c=dd(i，k)
+iO=i
+2        continue
+if(dabs(c).ge.1.e-16)goto 3
+ierror=1
+return
+3        if(i0．eq．k)goto 6
+do 4 j=k．n
+t=dd(k，j)
+dd(k，j)=dd(iO,j)
+4        dd(iO，j)=t
+t=dp(k)
+dp(k)=dp(iO)
+dp(i0)=t
+6        kpl=k+1
+c=1./c
+dp(k)=c*dp(k)
+do 10 j=kpl．n
+dd(k，j)=c*dd(k，j)
+do 20 i=kpl，n
+20       dd(i，j)=dd(i，j)一dd(i，k)*dd(k，j)
+10       dp(j)=dp(j)一dd(j，k)*dp(k)
+dp(n)=dp(n)／dd(n，n)
+do 40 k=1．nml
+i=n-k
+c=O．
+ipl=i+1
+do 50 j=ipl．n
+50       c2c+dd(i，j)*dp(j)
+40       dp(i)=dp(i)-c
+do 55 i=1,n
+55       p(i)=dp(i)／tO
+ierror=O
+return
+end
+subroutine result(d1，d2，r1，alfa，q，tilt，ql，qm，dc，
++    a，p，n，m，dr1，fai)
+
+c **********************************************************************
+c
+c        Output the calculated results
+c
+c **********************************************************************
+dimension a(30)，p(30)
+open(1，file=’Output’)
+alfa=57．29578*alfa
+tilt=57．29578*tilt
+fai=57．29578*fai
+write(1,5)
+5        format(//’ Input Roller Data(m)’／
++            ’ ---------------------’／
+write(1，10)d1，d2，r1，alfa，q，tilt，n
+10       format(／’Small end diameter of roller=’,f8．2
++               ／’Large end diameter of roller=’,f8．2
++               ／’ Roller efficient length    =’,f8．2
++               ／’ Roller taper angle(degree) =’,f8．2
++               ／’ Roller load            (N)= ’,f8．0
++               ／’ Roller tilt       (degree)= ’,f8．3
++               ／’ Roller strip element number=’，i5／)
+if(1-m)50，55，60
+50       write(1,52)
+52       format(／’ Input data of outer raceway(mm)’／)
+goto 58
+55       write(1,56)
+56       format(／’ Input data of inner raceway(ram)’／)
+58       write(1,59)dr1，fai
+59       format(//’ Small diameter of raceway =’,f8．2
++         ／’Half taper angle  (degree)= ’,f8．2／)
+60       write(1,15)
+15       format(//’ Calculated Results’／
++           ’ ------------------’／)
+write(1,20)dc，ql，qm
+20       format f／’ Roller deflection(mm)  =’,e1O．4
++          ／’Equilibrium load(N)     =’,e1O．4
++          ／’Equilibrium moment(N*mm)= ’,e1O．4／)
+write(1,25)(p(i)，i=1，n)
+25       format(／’Contact center stress field(N／mm**2)’
++        //(10f7.O／))
+write(1,30)(a(i)，i=1，n)
+30       format(／’Contact half width(mm)’//(10f7．4/))
+Close(1)
+return
+end
